@@ -124,25 +124,40 @@
   arrow.setLength(2)
   var vec = new THREE.Vector3
 
-  // var line1 = new THREE.Line(new THREE.BufferGeometry, new THREE.LineBasicMaterial({color: 'blue'}))
+  var linel = 1 // line length
+
+  var line1 = new THREE.Line(new THREE.BufferGeometry, new THREE.LineBasicMaterial({color: 'blue'}))
+  line1.geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array([ linel,0,0, -linel,0,0 ]), 3 ) )
+  line1.geometry.computeVertexNormals()
+  var line2 = line1.clone()
 
   var sph = new Mark(new THREE.MeshPhongMaterial({color: 'green'}))
-  watchVec(sph.position, {
-    x() {
-      arrow.setDirection(vec.copy(sph.position).normalize())
-    },
-    z() {
-      arrow.setDirection(vec.copy(sph.position).normalize())
-    }
-  })
-  sph.position.z = 1
-
   var size = [1, 2]
   var object = new THREE.Mesh(new THREE.PlaneGeometry(...size), new THREE.MeshPhongMaterial({color: 'red'}))
+
+  function updateArrowDirection() {
+    arrow.setDirection(vec.copy(sph.position).normalize())
+    line1.rotation.y = -new THREE.Vector2(vec.x, vec.z).angle() - Math.PI/2
+    line2.rotation.y = line1.rotation.y
+
+    calcSize()
+
+  }
+
+  watchVec(sph.position, {
+    x: updateArrowDirection,
+    z: updateArrowDirection
+  })
+
+  line1.position.z = -1
+  line2.position.z = 1
+
   object.position.y = -.1
   object.rotation.x = -Math.PI/2
 
   object.rotation.z = Math.PI/180*5
+
+  sph.position.z = 1
 
   gui.add({ 
     get rot() {
@@ -150,10 +165,20 @@
     },
     set rot(val) {
       object.rotation.z = val/180*Math.PI
+      calcSize()
     }
   }, 'rot', 0, 180, 1)
 
+  function calcSize() {
+
+    var rect = new THREE.Rectangle().setFromSizeAndAngle(...size, object.rotation.z).getBoundingByVec(vec)
+
+    line1.position.copy(rect.cross(vec))
+    line2.position.copy(line1.position.clone().multiplyScalar(-1))
+
+  }
+
   objs.push(sph)
-  three.scene.add(sph, arrow, object)
+  three.scene.add(sph, arrow, object, line1, line2)
 
 })()
